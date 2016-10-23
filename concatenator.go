@@ -5,32 +5,68 @@ import (
 	"io/ioutil"
 	"strings"
 	"errors"
+	"log"
+	"sync"
+	"fmt"
 )
 
 func Concatenator(urls ...string) (megabody string, err error) {
-	for _, url := range urls {
-		var body string
-		body, err = get(url)
-		if err != nil {
-			return
-		} else {
+	bodyChannel := make(chan string, len(urls))
+	errorChannel := make(chan error)
+	doneChannel := make(chan bool)
+	go channelGet(urls, bodyChannel, errorChannel, doneChannel)
+	for {
+		select {
+		case body := <-bodyChannel:
+			log.Printf("GOT %s", body)
 			megabody = megabody + strings.Trim(body, "\n")
+			log.Printf("megabody=%s", megabody)
+		case err = <-errorChannel:
+			fmt.Errorf("Error: %v", err)
+		case <-doneChannel:
+			log.Println("GOT A DONE")
+			log.Printf("megabody=%s", megabody)
+			return megabody, err
 		}
 	}
+	log.Println("END OF CONCATENATOR")
 	return
 }
 
-func get(url string)(body string, err error) {
+func channelGet(urls []string, bodyChannel chan string, errorChannel chan error, doneChannel chan bool) {
+	var wg sync.WaitGroup
+	for _, url := range urls {
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			body, err := get(url)
+			if err != nil {
+				errorChannel <- err
+			} else {
+				bodyChannel <- body
+			}
+		}(url)
+	}
+	wg.Wait()
+	log.Println("END OF WAIT")
+	doneChannel <- true
+}
+
+func get(url string) (body string, err error) {
 	var resp *http.Response
+	log.Printf("GET %s", url)
 	resp, err = http.Get(url)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode==200 {
+	if resp.StatusCode == 200 {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
 			body = string(bodyBytes)
+		} else {
+			log.Printf("ERROR %s : %v", url, err)
+			return "", err
 		}
 	} else {
 		err = errors.New("Non-200 response attempting to fetch " + url + " : " + resp.Status)

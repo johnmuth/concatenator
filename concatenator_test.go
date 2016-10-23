@@ -10,37 +10,34 @@ import (
 )
 
 func TestGetOne(t *testing.T) {
-	expected := makeExpectedResponse(1)
 	ts := makeTestServer(1)
 	defer ts.Close()
-	actual, err := get(makeTestUrl(ts.URL, 1))
-	if err != nil {
-		t.Error("Got unexpected error", err)
-	}
-	actual = strings.Trim(actual,"\n")
-	if actual != expected {
-		t.Errorf("'%s' was not equal to '%s'", actual, expected)
+	actual, _ := get(makeTestUrl(ts.URL, 1))
+	for _, expected := range makeExpectedResponseParts(1) {
+		if !strings.Contains(actual, expected) {
+			t.Errorf("'%s' does not contain '%s'", actual, expected )
+		}
 	}
 }
 
 func TestConcatenator(t *testing.T) {
-	expected := makeExpectedResponse(2)
-	ts := makeTestServer(2)
-	testUrls := makeTestUrls(ts.URL, 2)
+	ts := makeTestServer(5)
+	testUrls := makeTestUrls(ts.URL, 5)
 	defer ts.Close()
 	actual, err := Concatenator(testUrls...)
 	if err != nil {
 		t.Error("Got unexpected error", err)
 	}
 	actual = strings.Trim(actual,"\n")
-	if actual != expected {
-		t.Errorf("'%s' was not equal to '%s'", actual, expected )
+	for _, expected := range makeExpectedResponseParts(5) {
+		if !strings.Contains(actual, expected) {
+			t.Errorf("'%s' does not contain '%s'", actual, expected )
+		}
 	}
 }
 
 func BenchmarkConcatenator(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		expected := makeExpectedResponse(100)
 		ts := makeTestServer(100)
 		defer ts.Close()
 		testUrls := makeTestUrls(ts.URL, 100)
@@ -49,8 +46,10 @@ func BenchmarkConcatenator(b *testing.B) {
 			b.Error("Got unexpected error", err)
 		}
 		actual = strings.Trim(actual,"\n")
-		if actual != expected {
-			b.Errorf("'%s' was not equal to '%s'", actual, expected )
+		for _, expected := range makeExpectedResponseParts(100) {
+			if !strings.Contains(actual, expected) {
+				b.Errorf("'%s' does not contain '%s'", actual, expected )
+			}
 		}
 	}
 }
@@ -91,9 +90,9 @@ func makeTestServer(numResponses int) *httptest.Server {
 	}))
 }
 
-func makeExpectedResponse(numResponses int) (expectedResponse string) {
+func makeExpectedResponseParts(numResponses int) (expectedResponseParts []string) {
 	for i := 1; i <= numResponses; i++ {
-		expectedResponse+=fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i)
+		expectedResponseParts=append(expectedResponseParts,fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i))
 	}
 	return
 }
@@ -104,6 +103,6 @@ func makeTestUrls(baseUrl string, numResponses int) (testUrls []string) {
 	}
 	return
 }
-func makeTestUrl(baseUrl string, num int) (testUrl string) {
+func makeTestUrl(baseUrl string, num int) (string) {
 	return fmt.Sprintf("%s/%d", baseUrl, num)
 }
