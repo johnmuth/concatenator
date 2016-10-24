@@ -77,7 +77,7 @@ func makeTestServer(numResponses int) *httptest.Server {
 func makeDelayTestServer(numResponses int, d time.Duration) *httptest.Server {
 	expected := make(map[string]string)
 	for i := 1; i <= numResponses; i++ {
-		expected[fmt.Sprintf("/%d", i)] = fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i)
+		expected[fmt.Sprintf("/%d", i)] = makeExpectedResponsePart(i)
 	}
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(d)
@@ -93,9 +93,13 @@ func makeDelayTestServer(numResponses int, d time.Duration) *httptest.Server {
 
 func makeExpectedResponseParts(numResponses int) (expectedResponseParts []string) {
 	for i := 1; i <= numResponses; i++ {
-		expectedResponseParts = append(expectedResponseParts, fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i))
+		expectedResponseParts = append(expectedResponseParts, makeExpectedResponsePart(i))
 	}
 	return
+}
+
+func makeExpectedResponsePart(i int) (string) {
+	return fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i)
 }
 
 func makeTestUrls(baseUrl string, numResponses int) (testUrls []string) {
