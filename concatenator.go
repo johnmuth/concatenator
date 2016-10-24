@@ -14,7 +14,7 @@ func Concatenator(urls ...string) (megabody string, err error) {
 	bodyChannel := make(chan string)
 	errorChannel := make(chan error)
 	doneChannel := make(chan bool)
-	go channelGet(urls, bodyChannel, errorChannel, doneChannel)
+	go multiGet(urls, bodyChannel, errorChannel, doneChannel)
 	for {
 		select {
 		case body := <-bodyChannel:
@@ -30,7 +30,7 @@ func Concatenator(urls ...string) (megabody string, err error) {
 	}
 }
 
-func channelGet(urls []string, bodyChannel chan string, errorChannel chan error, doneChannel chan bool) {
+func multiGet(urls []string, bodyChannel chan string, errorChannel chan error, doneChannel chan bool) {
 	var wg sync.WaitGroup
 	for _, url := range urls {
 		wg.Add(1)
