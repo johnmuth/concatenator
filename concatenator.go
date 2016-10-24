@@ -19,11 +19,12 @@ func Concatenator(urls ...string) (megabody string, err error) {
 	for {
 		select {
 		case body := <-bodyChannel:
+			body = strings.Trim(body, "\n")
 			log.Printf("Locking to add %s", body)
 			mutex.Lock()
-			megabody = megabody + strings.Trim(body, "\n")
+			megabody = megabody + body
 			mutex.Unlock()
-			log.Printf("Unlocked after adding %s ... megabody=%s", body, megabody)
+			log.Printf("Unlocked after adding %s megabody=%s", body, megabody)
 		case err = <-errorChannel:
 			fmt.Errorf("Error: %v", err)
 		case <-doneChannel:
