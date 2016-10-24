@@ -29,13 +29,15 @@ func TestConcatenator(t *testing.T) {
 func BenchmarkConcatenator(b *testing.B) {
 	numUrls := 100
 	delay := 200 * time.Millisecond
+	ts := makeDelayTestServer(numUrls, delay)
+	defer ts.Close()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ts := makeDelayTestServer(numUrls, delay)
-		defer ts.Close()
 		testUrls := makeTestUrls(ts.URL, numUrls)
 		actual, _ := Concatenator(testUrls...)
 		isCorrect(actual, b, numUrls)
 	}
+	b.StopTimer()
 }
 
 type Test interface {
