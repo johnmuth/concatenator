@@ -10,10 +10,11 @@ import (
 )
 
 func TestGetOne(t *testing.T) {
-	ts := makeTestServer(1)
+	numUrls := 1
+	ts := makeTestServer(numUrls)
 	defer ts.Close()
-	actual, _ := get(makeTestUrl(ts.URL, 1))
-	isCorrect(actual, t, 1)
+	actual, _ := get(makeTestUrl(ts.URL, numUrls))
+	isCorrect(actual, t, numUrls)
 }
 
 func TestConcatenator(t *testing.T) {
@@ -26,12 +27,14 @@ func TestConcatenator(t *testing.T) {
 }
 
 func BenchmarkConcatenator(b *testing.B) {
+	numUrls := 100
+	delay := 200 * time.Millisecond
 	for i := 0; i < b.N; i++ {
-		ts := makeTestServer(100)
+		ts := makeDelayTestServer(numUrls, delay)
 		defer ts.Close()
-		testUrls := makeTestUrls(ts.URL, 100)
+		testUrls := makeTestUrls(ts.URL, numUrls)
 		actual, _ := Concatenator(testUrls...)
-		isCorrect(actual, b, 100)
+		isCorrect(actual, b, numUrls)
 	}
 }
 
@@ -68,12 +71,16 @@ func TestConcatenatorErr(t *testing.T) {
 }
 
 func makeTestServer(numResponses int) *httptest.Server {
+	return makeDelayTestServer(numResponses, 0 * time.Millisecond)
+}
+
+func makeDelayTestServer(numResponses int, d time.Duration) *httptest.Server {
 	expected := make(map[string]string)
 	for i := 1; i <= numResponses; i++ {
 		expected[fmt.Sprintf("/%d", i)] = fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i)
 	}
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(d)
 		expectedResp, ok := expected[r.URL.Path]
 		if ok {
 			fmt.Fprintln(w, expectedResp)
