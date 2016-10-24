@@ -15,11 +15,14 @@ func Concatenator(urls ...string) (megabody string, err error) {
 	errorChannel := make(chan error)
 	doneChannel := make(chan bool)
 	go channelGet(urls, bodyChannel, errorChannel, doneChannel)
+	var mutex = &sync.Mutex{}
 	for {
 		select {
 		case body := <-bodyChannel:
 			log.Printf("GOT %s", body)
+			mutex.Lock()
 			megabody = megabody + strings.Trim(body, "\n")
+			mutex.Unlock()
 			log.Printf("megabody=%s", megabody)
 		case err = <-errorChannel:
 			fmt.Errorf("Error: %v", err)
@@ -29,8 +32,6 @@ func Concatenator(urls ...string) (megabody string, err error) {
 			return megabody, err
 		}
 	}
-	log.Println("END OF CONCATENATOR")
-	return
 }
 
 func channelGet(urls []string, bodyChannel chan string, errorChannel chan error, doneChannel chan bool) {

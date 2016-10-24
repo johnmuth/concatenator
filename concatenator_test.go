@@ -21,15 +21,15 @@ func TestGetOne(t *testing.T) {
 }
 
 func TestConcatenator(t *testing.T) {
-	ts := makeTestServer(5)
-	testUrls := makeTestUrls(ts.URL, 5)
+	ts := makeTestServer(2)
+	testUrls := makeTestUrls(ts.URL, 2)
 	defer ts.Close()
 	actual, err := Concatenator(testUrls...)
 	if err != nil {
 		t.Error("Got unexpected error", err)
 	}
 	actual = strings.Trim(actual,"\n")
-	for _, expected := range makeExpectedResponseParts(5) {
+	for _, expected := range makeExpectedResponseParts(2) {
 		if !strings.Contains(actual, expected) {
 			t.Errorf("'%s' does not contain '%s'", actual, expected )
 		}
