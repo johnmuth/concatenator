@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"testing"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -13,27 +13,16 @@ func TestGetOne(t *testing.T) {
 	ts := makeTestServer(1)
 	defer ts.Close()
 	actual, _ := get(makeTestUrl(ts.URL, 1))
-	for _, expected := range makeExpectedResponseParts(1) {
-		if !strings.Contains(actual, expected) {
-			t.Errorf("'%s' does not contain '%s'", actual, expected )
-		}
-	}
+	isCorrect(actual, t, 1)
 }
 
 func TestConcatenator(t *testing.T) {
-	ts := makeTestServer(2)
-	testUrls := makeTestUrls(ts.URL, 2)
+	numUrls := 2
+	ts := makeTestServer(numUrls)
+	testUrls := makeTestUrls(ts.URL, numUrls)
 	defer ts.Close()
-	actual, err := Concatenator(testUrls...)
-	if err != nil {
-		t.Error("Got unexpected error", err)
-	}
-	actual = strings.Trim(actual,"\n")
-	for _, expected := range makeExpectedResponseParts(2) {
-		if !strings.Contains(actual, expected) {
-			t.Errorf("'%s' does not contain '%s'", actual, expected )
-		}
-	}
+	actual, _ := Concatenator(testUrls...)
+	isCorrect(actual, t, numUrls)
 }
 
 func BenchmarkConcatenator(b *testing.B) {
@@ -41,15 +30,20 @@ func BenchmarkConcatenator(b *testing.B) {
 		ts := makeTestServer(100)
 		defer ts.Close()
 		testUrls := makeTestUrls(ts.URL, 100)
-		actual, err := Concatenator(testUrls...)
-		if err != nil {
-			b.Error("Got unexpected error", err)
-		}
-		actual = strings.Trim(actual,"\n")
-		for _, expected := range makeExpectedResponseParts(100) {
-			if !strings.Contains(actual, expected) {
-				b.Errorf("'%s' does not contain '%s'", actual, expected )
-			}
+		actual, _ := Concatenator(testUrls...)
+		isCorrect(actual, b, 100)
+	}
+}
+
+type Test interface {
+	Errorf(format string, args ...interface{})
+}
+
+func isCorrect(actual string, t Test, numUrls int) {
+	actual = strings.Trim(actual, "\n")
+	for _, expected := range makeExpectedResponseParts(numUrls) {
+		if !strings.Contains(actual, expected) {
+			t.Errorf("'%s' does not contain '%s'", actual, expected)
 		}
 	}
 }
@@ -67,7 +61,7 @@ func TestGetOneErr(t *testing.T) {
 func TestConcatenatorErr(t *testing.T) {
 	ts := makeTestServer(0)
 	defer ts.Close()
-	_, err := Concatenator(ts.URL +"/x")
+	_, err := Concatenator(ts.URL + "/x")
 	if err == nil {
 		t.Error("Didn't get expected error")
 	}
@@ -76,7 +70,7 @@ func TestConcatenatorErr(t *testing.T) {
 func makeTestServer(numResponses int) *httptest.Server {
 	expected := make(map[string]string)
 	for i := 1; i <= numResponses; i++ {
-		expected[fmt.Sprintf("/%d", i)]=fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i)
+		expected[fmt.Sprintf("/%d", i)] = fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i)
 	}
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
@@ -84,7 +78,7 @@ func makeTestServer(numResponses int) *httptest.Server {
 		if ok {
 			fmt.Fprintln(w, expectedResp)
 		} else {
-			http.NotFound(w,r)
+			http.NotFound(w, r)
 		}
 
 	}))
@@ -92,7 +86,7 @@ func makeTestServer(numResponses int) *httptest.Server {
 
 func makeExpectedResponseParts(numResponses int) (expectedResponseParts []string) {
 	for i := 1; i <= numResponses; i++ {
-		expectedResponseParts=append(expectedResponseParts,fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i))
+		expectedResponseParts = append(expectedResponseParts, fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i))
 	}
 	return
 }
@@ -103,6 +97,7 @@ func makeTestUrls(baseUrl string, numResponses int) (testUrls []string) {
 	}
 	return
 }
-func makeTestUrl(baseUrl string, num int) (string) {
+
+func makeTestUrl(baseUrl string, num int) string {
 	return fmt.Sprintf("%s/%d", baseUrl, num)
 }

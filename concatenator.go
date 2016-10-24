@@ -1,17 +1,17 @@
 package concatenator
 
 import (
-	"net/http"
-	"io/ioutil"
-	"strings"
 	"errors"
-	"log"
-	"sync"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strings"
+	"sync"
 )
 
 func Concatenator(urls ...string) (megabody string, err error) {
-	bodyChannel := make(chan string, len(urls))
+	bodyChannel := make(chan string)
 	errorChannel := make(chan error)
 	doneChannel := make(chan bool)
 	go channelGet(urls, bodyChannel, errorChannel, doneChannel)
@@ -19,15 +19,16 @@ func Concatenator(urls ...string) (megabody string, err error) {
 	for {
 		select {
 		case body := <-bodyChannel:
-			log.Printf("GOT %s", body)
+			log.Printf("Locking to add %s", body)
 			mutex.Lock()
 			megabody = megabody + strings.Trim(body, "\n")
 			mutex.Unlock()
-			log.Printf("megabody=%s", megabody)
+			log.Printf("Unlocked after adding %s ... megabody=%s", body, megabody)
 		case err = <-errorChannel:
 			fmt.Errorf("Error: %v", err)
 		case <-doneChannel:
 			log.Println("GOT A DONE")
+
 			log.Printf("megabody=%s", megabody)
 			return megabody, err
 		}
@@ -62,6 +63,7 @@ func get(url string) (body string, err error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
+		log.Printf("GOT %s", url)
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
 			body = string(bodyBytes)
